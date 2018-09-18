@@ -1,0 +1,7 @@
+spring:
+  couchbase:
+    bootstrap-hosts: "127.0.0.1"
+    bucket:
+      name: "bucket_1"
+      password: "bucket_1"
+
