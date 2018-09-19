@@ -25,6 +25,9 @@ import net.javacrumbs.shedlock.support.AbstractStorageAccessor;
 import net.javacrumbs.shedlock.support.StorageBasedLockProvider;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * Distributed lock using CouchbaseDB
@@ -110,6 +113,11 @@ public class CouchbaseLockProvider extends StorageBasedLockProvider {
         {
             try {
                 JsonDocument document = bucket.get(documentId);
+                LocalDateTime lockUntil = LocalDateTime.parse((String) document.content().get(LOCK_UNTIL));
+                if (lockUntil.isAfter(LocalDateTime.parse(now()))) {
+                     return false;
+                }
+
                 document.content().put(LOCK_UNTIL, lockUntil(lockConfiguration.getLockAtMostUntil()));
                 document.content().put(LOCKED_AT, now());
                 document.content().put(LOCKED_BY, getHostname());
@@ -133,11 +141,15 @@ public class CouchbaseLockProvider extends StorageBasedLockProvider {
         }
 
         private String now() {
-            return Instant.now().toString();
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            return localDateTime.format(timeFormatter);
         }
 
         private String lockUntil(Instant lockAtMostUntil) {
-            return Instant.ofEpochMilli(lockAtMostUntil.toEpochMilli()).toString();
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(lockAtMostUntil, ZoneId.systemDefault());
+            DateTimeFormatter timeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+            return localDateTime.format(timeFormatter);
         }
 
     }

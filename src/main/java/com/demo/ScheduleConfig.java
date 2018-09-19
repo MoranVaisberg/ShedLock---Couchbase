@@ -14,6 +14,9 @@ import org.springframework.scheduling.annotation.Scheduled;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.Optional;
 
 
@@ -32,7 +35,7 @@ public class ScheduleConfig {
         log.info("task-started");
         Optional<SimpleLock> lock = lockProvider().lock(lockConfig(LOCK_ID));
         if (lock.isPresent()) {
-            log.info("Locked, Lock Until: {}", lockRepository.findById(LOCK_ID).get().getLockedUntil());
+            log.info("Locked, Lock Until: {}, now is: {}", lockRepository.findById(LOCK_ID).get().getLockedUntil(), now());
             Thread.sleep(5000);
             lock.get().unlock();
             log.info("Unlocked, Lock Until: {} ", lockRepository.findById(LOCK_ID).get().getLockedUntil());
@@ -62,6 +65,12 @@ public class ScheduleConfig {
     private static LockConfiguration lockConfig(String name, Duration lockAtMostFor, Duration lockAtLeastFor) {
         Instant now = Instant.now();
         return new LockConfiguration(name, now.plus(lockAtMostFor), now.plus(lockAtLeastFor));
+    }
+
+    private String now() {
+        LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.now(), ZoneId.systemDefault());
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+        return localDateTime.format(timeFormatter);
     }
 
 }
