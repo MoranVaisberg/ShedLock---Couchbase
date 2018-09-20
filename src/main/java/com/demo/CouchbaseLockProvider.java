@@ -69,8 +69,8 @@ public class CouchbaseLockProvider extends StorageBasedLockProvider {
     static final String LOCKED_AT = "lockedAt";
     static final String LOCKED_BY = "lockedBy";
 
-    public CouchbaseLockProvider (Bucket bucket, String documentId) {
-        this(new CouchbaseLockProvider.CouchbaseAccessor(bucket, documentId));
+    public CouchbaseLockProvider (Bucket bucket) {
+        this(new CouchbaseLockProvider.CouchbaseAccessor(bucket));
     }
 
     CouchbaseLockProvider(CouchbaseLockProvider.CouchbaseAccessor couchbaseAccessor) {
@@ -79,12 +79,10 @@ public class CouchbaseLockProvider extends StorageBasedLockProvider {
 
     static class CouchbaseAccessor extends AbstractStorageAccessor {
 
-        private final String documentId;
         private final Bucket bucket;
 
-        CouchbaseAccessor(Bucket bucket, String documentId) {
+        CouchbaseAccessor(Bucket bucket) {
             this.bucket = bucket;
-            this.documentId = documentId;
         }
 
         @Override
@@ -92,11 +90,11 @@ public class CouchbaseLockProvider extends StorageBasedLockProvider {
             try {
 
                 JsonObject content = JsonObject.empty();
-                content.put(LOCK_NAME, documentId);
+                content.put(LOCK_NAME, lockConfiguration.getName());
                 content.put(LOCK_UNTIL, lockUntil(lockConfiguration.getLockAtMostUntil()));
                 content.put(LOCKED_AT, now());
                 content.put(LOCKED_BY, getHostname());
-                JsonDocument document = JsonDocument.create(documentId, content);
+                JsonDocument document = JsonDocument.create(lockConfiguration.getName(), content);
 
                 bucket.insert(document);
                 return true;
@@ -112,7 +110,7 @@ public class CouchbaseLockProvider extends StorageBasedLockProvider {
         public boolean updateRecord(LockConfiguration lockConfiguration)
         {
             try {
-                JsonDocument document = bucket.get(documentId);
+                JsonDocument document = bucket.get(lockConfiguration.getName());
                 LocalDateTime lockUntil = LocalDateTime.parse((String) document.content().get(LOCK_UNTIL));
                 if (lockUntil.isAfter(LocalDateTime.parse(now()))) {
                      return false;
@@ -133,11 +131,11 @@ public class CouchbaseLockProvider extends StorageBasedLockProvider {
 
         @Override
         public void unlock(LockConfiguration lockConfiguration) {
-                JsonDocument document = bucket.get(documentId);
-                document.content().put(LOCK_UNTIL, now());
-                document.content().put(LOCKED_AT, now());
-                document.content().put(LOCKED_BY, getHostname());
-                bucket.replace(document);
+            JsonDocument document = bucket.get(lockConfiguration.getName());
+            document.content().put(LOCK_UNTIL, lockUntil(lockConfiguration.getUnlockTime()));
+            document.content().put(LOCKED_AT,  now());
+            document.content().put(LOCKED_BY,  getHostname());
+            bucket.replace(document);
         }
 
         private String now() {

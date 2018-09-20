@@ -55,7 +55,7 @@ public class ScheduleConfig {
 
     @Bean
     public LockProvider lockProvider() {
-        return new CouchbaseLockProvider(lockRepository.getCouchbaseOperations().getCouchbaseBucket(), LOCK_ID);
+        return new CouchbaseLockProvider(lockRepository.getCouchbaseOperations().getCouchbaseBucket());
     }
 
     private static LockConfiguration lockConfig(String name) {
